@@ -1,0 +1,39 @@
+.donut-chart-box {
+  width: 30vw;
+  height: 30vw;
+  position: relative;
+  margin-top: 1rem;
+}
+
+.paper-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.main-paper-box {
+  /* display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: row; */
+  display: grid;
+  grid-template-columns: [left] 1fr [middle] 1fr [right];
+  grid-template-rows: [top] 1fr [bottom];
+}
+
+.sub-paper-box-1 {
+  grid-column-start: left;
+  grid-column-end: middle;
+
+  grid-row-start: top;
+  grid-row-end: bottom;
+}
+
+.sub-paper-box-2 {
+  grid-column-start: middle;
+  grid-column-end: right;
+
+  grid-row-start: top;
+  grid-row-end: bottom;
+}
