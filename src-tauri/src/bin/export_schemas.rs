@@ -1,5 +1,6 @@
 use budgeting::{
     self,
+    data::Percentage,
     transfer_data::{MoneyJson, UpdateBudgetJson},
     util::type_name_last,
 };
@@ -14,4 +15,5 @@ fn schema_for_one<T: JsonSchema>() {
 fn main() {
     schema_for_one::<MoneyJson>();
     schema_for_one::<UpdateBudgetJson>();
+    schema_for_one::<Percentage>();
 }

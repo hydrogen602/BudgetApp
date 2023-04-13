@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::data::Money;
+use crate::data::{Money, Percentage};
 use rusty_money::iso;
 use schemars::JsonSchema;
 
@@ -43,4 +43,5 @@ impl fmt::Display for CurrencyNotFoundError {
 pub enum UpdateBudgetJson {
     Income(MoneyJson),
     Expense(String, MoneyJson),
+    ExpensePercentage(String, Percentage),
 }

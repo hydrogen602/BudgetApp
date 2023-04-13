@@ -1,5 +1,7 @@
+use either::Either;
 // use rust_decimal::Decimal;
 use rusty_money::{iso, iso::Currency, Money as rs_Money};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 // use serde::ser::SerializeMap;
 // use serde::{Deserialize, Serialize, Serializer};
@@ -8,11 +10,14 @@ use std::{collections::HashMap, fs::File, path::Path, sync::Mutex};
 
 pub type Money = rs_Money<'static, Currency>;
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct Percentage(pub f64);
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(bound = "S: helper_types::MoneyTypeHelperSealed")]
 pub struct IncomeAndExpensesRaw<S: helper_types::MoneyTypeSealed> {
     pub income: S,
-    pub expenses: HashMap<String, S>,
+    pub expenses: HashMap<String, Either<S, Percentage>>,
 }
 
 /// This is the type that should be used for actual state
@@ -43,7 +48,7 @@ mod helper_types {
                 expenses: raw
                     .expenses
                     .into_iter()
-                    .map(|(k, v)| (k, v.into()))
+                    .map(|(k, v)| (k, v.map_left(|l| l.into())))
                     .collect(),
             }
         }
@@ -60,7 +65,15 @@ mod helper_types {
             let expenses: HashMap<_, _> = raw
                 .expenses
                 .into_iter()
-                .map(|(k, v)| Ok((k, v.try_into()?)))
+                .map(|(k, v)| {
+                    Ok((
+                        k,
+                        match v {
+                            Either::Left(l) => Either::Left(l.try_into()?),
+                            Either::Right(r) => Either::Right(r),
+                        },
+                    ))
+                })
                 .collect::<Result<_, Self::Error>>()?;
 
             Ok(IncomeAndExpensesRaw { income, expenses })
@@ -69,6 +82,7 @@ mod helper_types {
 
     use std::collections::HashMap;
 
+    use either::Either;
     use rust_decimal::Decimal;
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 

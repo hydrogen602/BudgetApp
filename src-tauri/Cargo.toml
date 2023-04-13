@@ -20,6 +20,7 @@ serde_json = "1.0"
 rusty-money = { version = "0.4.1", features = ["iso"] }
 schemars = "0.8.12"
 rust_decimal = "1.29.1"
+either = { version = "1.8.1", features = ["serde"] }
 
 
 [features]

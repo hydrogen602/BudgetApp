@@ -26,3 +26,4 @@ dist-ssr
 # Generated files
 src-tauri/schemas/
 src/rust-types/
+src-tauri/Untitled.json

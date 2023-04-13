@@ -1,4 +1,4 @@
-import { AppBar, Button, IconButton, Paper, Toolbar, Typography } from "@mui/material";
+import { AppBar, Button, IconButton, Menu, Paper, Toolbar, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import MenuIcon from '@mui/icons-material/Menu';
 import { CurrencyInput, PercentageInput } from "../components/NumericInput";
@@ -11,6 +11,7 @@ import { Chart } from 'react-chartjs-2';
 import { useState } from "react";
 import { FixedExpense, PercentExpense } from "../data";
 import { dialog } from "@tauri-apps/api";
+import FileMenu from "../components/FileMenu";
 
 interface IExpenses {
   [key: string]: FixedExpense | PercentExpense;
@@ -19,45 +20,28 @@ interface IExpenses {
 function BudgetEstimate(props: {}) {
 
   const [income, setIncome] = useState<Dinero>(DineroBuilder({ amount: 0, currency: 'USD' }));
-  const [expenses, setExpenses] = useState<IExpenses>({
+  const [expenses, setExpensesRaw] = useState<IExpenses>({
     'Savings': new PercentExpense(0),
     'Donations': new PercentExpense(0),
     'Monthly Rent': new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })),
     'Monthly Groceries': new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })),
   });
 
+  const setExpenses = (param: (_: IExpenses) => IExpenses) => {
+    console.log(JSON.stringify(param(expenses)));
+    return setExpensesRaw(param);
+  }
+
   let netIncome = income;
   for (const expensive of Object.values(expenses)) {
     netIncome = netIncome.subtract(expensive.getAmount(income));
   }
 
-  console.log(netIncome, JSON.stringify(netIncome))
-
-  async function save() {
-    const options: dialog.SaveDialogOptions = {
-      title: 'Save File',
-      defaultPath: './',
-      filters: [
-        {
-          name: 'Json files',
-          extensions: ['json'],
-        },
-      ],
-    };
-
-    const result = await dialog.save(options);
-    if (result) {
-      console.log(`File path: ${result}`);
-      // The user selected a file to save.
-      // Do something with the file path.
-    } else {
-      // The user canceled the save dialog.
-    }
-  }
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   return <>
     <AppBar position="static" sx={{
-      minHeight: '2rem'
+      marginBottom: '2rem',
     }}>
       <Toolbar>
         <IconButton
@@ -66,12 +50,16 @@ function BudgetEstimate(props: {}) {
           color="inherit"
           aria-label="menu"
           sx={{ mr: 1 }}
+          onClick={(event) => setAnchorEl(event.currentTarget)}
         >
           <MenuIcon />
         </IconButton>
-        {/* <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          News
-        </Typography> */}
+        <Menu open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)}>
+          <FileMenu />
+        </Menu>
+        <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>
+          Budget Estimate
+        </Typography>
       </Toolbar>
     </AppBar>
     <Box sx={{
@@ -81,8 +69,8 @@ function BudgetEstimate(props: {}) {
       justifyContent: 'center',
     }}>
 
-      <Typography variant="h2">Budget Estimate</Typography>
-      <Button onClick={save}>Stuff</Button>
+      <Typography variant="h2"></Typography>
+      {/* <Button onClick={save}>Stuff</Button> */}
 
       <div className="main-paper-box">
         <div className="sub-paper-box-1">

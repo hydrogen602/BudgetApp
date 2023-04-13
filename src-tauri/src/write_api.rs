@@ -5,19 +5,18 @@ use crate::{
     transfer_data::{CurrencyNotFoundError, UpdateBudgetJson},
 };
 
+// TODO: refactor this: either do all state in js or all state in rust, not this weird mix
+
 #[tauri::command]
-pub fn save_to_disk(path: String, state: State<MyState>) -> Result<(), Box<dyn std::error::Error>> {
-    state.save(path)?;
+pub fn save_to_disk(path: String, state: State<MyState>) -> Result<(), String> {
+    state.save(path).map_err(|e| e.to_string())?;
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn load_from_disk(
-    path: String,
-    state: State<MyState>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    state.load(path)?;
+pub fn load_from_disk(path: String, state: State<MyState>) -> Result<(), String> {
+    state.load(path).map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -35,7 +34,14 @@ pub fn update_budget(
         }
         UpdateBudgetJson::Expense(name, mj) => {
             let amount: Money = mj.try_into()?;
-            locked_state.expenses.insert(name, amount);
+            locked_state
+                .expenses
+                .insert(name, either::Either::Left(amount));
+        }
+        UpdateBudgetJson::ExpensePercentage(name, percentage) => {
+            locked_state
+                .expenses
+                .insert(name, either::Either::Right(percentage));
         }
     }
 
