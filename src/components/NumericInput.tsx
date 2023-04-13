@@ -8,12 +8,14 @@ export interface IAmountInputProps<T> {
   onChange?: (amount: T) => void,
   props?: TextFieldProps,
   sx?: SxProps<Theme>,
-  default_?: string,
+  value?: T,
 }
 
 
-export function CurrencyInput({ onChange, props, sx, default_ }: IAmountInputProps<Dinero>) {
-  const [inputAmountRaw, setInputAmountRaw] = useState(default_ || '');
+export function CurrencyInput({ onChange, props, sx, value }: IAmountInputProps<Dinero>) {
+  const valueTransformed = value ? (value.getAmount() / (10 ** value.getPrecision())) : value;
+
+  const [inputAmountRaw, setInputAmountRaw] = useState(valueTransformed === 0 ? '' : (valueTransformed || '') + '');
 
   return <TextField
     sx={sx}
@@ -26,7 +28,6 @@ export function CurrencyInput({ onChange, props, sx, default_ }: IAmountInputPro
     onChange={(ev) => {
       const val = ev.target.value;
       if (val.match(/^[0-9]*([.][0-9]{0,2})?$/)) {
-        console.log(val)
         setInputAmountRaw(val);
         if (onChange) {
           onChange(DineroBuilder({ amount: Math.round(100 * parseFloat(val || '0')), currency: 'USD' }));
@@ -36,8 +37,8 @@ export function CurrencyInput({ onChange, props, sx, default_ }: IAmountInputPro
   />;
 }
 
-export function PercentageInput({ onChange, props, sx }: IAmountInputProps<number>) {
-  const [inputAmountRaw, setInputAmountRaw] = useState('');
+export function PercentageInput({ onChange, props, sx, value }: IAmountInputProps<number>) {
+  const [inputAmountRaw, setInputAmountRaw] = useState((value === 0 ? '' : (value || '') + ''));
 
   return <TextField
     sx={sx}

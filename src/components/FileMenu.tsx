@@ -7,33 +7,76 @@ import SaveIcon from '@mui/icons-material/Save';
 import FileOpenIcon from '@mui/icons-material/FileOpen';
 import SaveAsIcon from '@mui/icons-material/SaveAs';
 import { dialog } from '@tauri-apps/api';
-import { saveToDisk } from '../rust-invoke';
+import { loadFromDisk, saveToDisk } from '../rust-invoke';
+import { useContext } from 'react';
+import { SnackbarContext } from '../App';
+import { IncomeAndExpensesJson } from '../rust-types/IncomeAndExpensesJson';
 
-async function saveAs() {
-  const options: dialog.SaveDialogOptions = {
-    title: 'Save File',
-    defaultPath: './',
-    filters: [
-      {
-        name: 'Json files',
-        extensions: ['json'],
-      },
-    ],
-  };
 
-  const result = await dialog.save(options);
-  if (result) {
-    console.log(`File path: ${result}`);
-    // The user selected a file to save.
-    await saveToDisk(result);
-  } else {
-    // The user canceled the save dialog.
+
+
+
+export default function FileMenu({ getBudgetData, setBudgetData }: { getBudgetData: () => IncomeAndExpensesJson, setBudgetData: (_: IncomeAndExpensesJson) => void }) {
+  const snackbar = useContext(SnackbarContext)
+
+  async function saveAs() {
+    const options: dialog.SaveDialogOptions = {
+      title: 'Save File',
+      defaultPath: './',
+      filters: [
+        {
+          name: 'Json files',
+          extensions: ['json'],
+        },
+      ],
+    };
+
+    const result = await dialog.save(options);
+    if (result) {
+      console.log(`File path: ${result}`);
+      // The user selected a file to save.
+      try {
+        return await saveToDisk(result, getBudgetData());
+      } catch (e) {
+        console.error(e);
+        snackbar(`Error saving file: ${e}`)
+      }
+    } else {
+      // The user canceled the save dialog.
+    }
   }
-}
+
+  async function load() {
+    const options: dialog.OpenDialogOptions = {
+      title: 'Open File',
+      defaultPath: './',
+      filters: [
+        {
+          name: 'Json files',
+          extensions: ['json'],
+        },
+      ],
+      multiple: false
+    };
+
+    const result = await dialog.open(options);
+    if (result) {
+      console.log(`File path: ${result}`);
+      // The user selected a file to save.
+      try {
+        const data = await loadFromDisk(result as string);
+        setBudgetData(data);
+        return;
+      } catch (e) {
+        console.error(e);
+        snackbar(`Error saving file: ${e}`)
+      }
+    } else {
+      // The user canceled the save dialog.
+    }
+  }
 
 
-
-export default function FileMenu() {
   return (
     // <Paper sx={{ width: 320, maxWidth: '100%' }}>
     <MenuList>
@@ -53,7 +96,7 @@ export default function FileMenu() {
           Save As...
         </ListItemText>
       </MenuItem>
-      <MenuItem>
+      <MenuItem onClick={load}>
         <ListItemIcon>
           <FileOpenIcon fontSize="small" />
         </ListItemIcon>

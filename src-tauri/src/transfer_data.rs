@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{error::Error, fmt, fs::File, path::Path};
 
 use crate::data::{Money, Percentage};
 use rusty_money::iso;
@@ -40,8 +40,34 @@ impl fmt::Display for CurrencyNotFoundError {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, JsonSchema, Debug)]
-pub enum UpdateBudgetJson {
-    Income(MoneyJson),
+pub enum ExpensesJson {
     Expense(String, MoneyJson),
     ExpensePercentage(String, Percentage),
+}
+
+#[derive(serde::Deserialize, serde::Serialize, JsonSchema, Debug)]
+pub struct IncomeJson(pub MoneyJson);
+
+#[derive(serde::Deserialize, serde::Serialize, JsonSchema, Debug)]
+pub struct IncomeAndExpensesJson {
+    pub income: Vec<IncomeJson>,
+    pub expenses: Vec<ExpensesJson>,
+}
+
+impl IncomeAndExpensesJson {
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), Box<dyn Error>> {
+        let f = File::create(&path)?;
+
+        serde_json::to_writer_pretty(f, self)?;
+
+        Ok(())
+    }
+
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, Box<dyn Error>> {
+        let f = File::open(&path)?;
+
+        let data: Self = serde_json::from_reader(f)?;
+
+        Ok(data)
+    }
 }
