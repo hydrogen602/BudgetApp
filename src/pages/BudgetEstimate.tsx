@@ -1,6 +1,7 @@
 import { AppBar, Button, IconButton, Menu, Paper, Toolbar, Typography } from "@mui/material";
 import { Box } from "@mui/system";
 import MenuIcon from '@mui/icons-material/Menu';
+import TuneIcon from '@mui/icons-material/Tune';
 import { CurrencyInput, PercentageInput } from "../components/NumericInput";
 import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
@@ -15,6 +16,7 @@ import { IncomeAndExpensesJson } from "../rust-types/IncomeAndExpensesJson";
 import { ExpensesJson } from "../rust-types/ExpensesJson";
 import NewExpenseDialog from "../components/NewExpense";
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
+import IncomeOptions from "../components/IncomeOptions";
 
 interface IExpenses {
   [key: string]: FixedExpense | PercentExpense;
@@ -80,6 +82,11 @@ function BudgetEstimate(props: {}) {
   const expenseNameList = useMemo(() => Object.keys(expenses), [expenses]);
   const [expenseEdit, setExpenseEdit] = useState(false);
 
+  const [incomeOptsOpen, setIncomeOptsOpen] = useState(false);
+
+  const [filename, setFilename] = useState<string | null>(null);
+
+
   return <>
     <NewExpenseDialog
       key={expenseDialogOpen + ''}
@@ -94,6 +101,10 @@ function BudgetEstimate(props: {}) {
         }
       }}
     />
+    <IncomeOptions open={incomeOptsOpen} onClose={() => setIncomeOptsOpen(false)} setIncome={(income) => {
+      setIncome(income);
+      setResetKey(key => key + 1);
+    }} />
     <AppBar position="static" sx={{
       marginBottom: '2rem',
     }}>
@@ -110,10 +121,14 @@ function BudgetEstimate(props: {}) {
         </IconButton>
         <Menu open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)} >
           <FileMenu
+            setFilename={setFilename}
+            filename={filename}
             getBudgetData={() => getAllState(income, expenses)}
             setBudgetData={setBudgetData}
             onExpenseAdd={() => { setExpenseDialogOpen(true); setAnchorEl(null) }}
-            onExpenseEdit={() => { setExpenseEdit(true); setAnchorEl(null) }} />
+            onExpenseEdit={() => { setExpenseEdit(true); setAnchorEl(null) }}
+
+          />
         </Menu>
         <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>
           Budget Estimate
@@ -135,12 +150,22 @@ function BudgetEstimate(props: {}) {
         <div className="sub-paper-box-1">
           <Paper elevation={3} sx={{ padding: '1.5rem', margin: '1rem' }} className="paper-box">
             <Typography variant="h4">Income</Typography>
-            <CurrencyInput sx={{
-              margin: '1rem',
-            }} props={{
-              label: 'Monthly Income',
-              size: 'small',
-            }} onChange={setIncome} value={income} />
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <CurrencyInput sx={{
+                margin: '1rem',
+              }} props={{
+                label: 'Monthly Income',
+                size: 'small',
+              }} onChange={setIncome} value={income} />
+              <IconButton onClick={() => setIncomeOptsOpen(true)}>
+                <TuneIcon />
+              </IconButton>
+            </Box>
           </Paper>
 
           <Paper elevation={3} sx={{ padding: '1.5rem', margin: '1rem' }} className="paper-box">

@@ -37,6 +37,29 @@ export function CurrencyInput({ onChange, props, sx, value }: IAmountInputProps<
   />;
 }
 
+export function HourInput({ onChange, props, sx, value }: IAmountInputProps<number>) {
+  const [inputAmountRaw, setInputAmountRaw] = useState((value === 0 ? '' : (value || '') + ''));
+
+  return <TextField
+    sx={sx}
+    InputProps={{
+      inputMode: 'numeric',
+      endAdornment: <InputAdornment position="start">hr</InputAdornment>,
+    }}
+    {...props}
+    value={inputAmountRaw}
+    onChange={(ev) => {
+      const val = ev.target.value;
+      if (val.match(/^[0-9]*([.][0-9]{0,2})?$/)) {
+        setInputAmountRaw(val);
+        if (onChange) {
+          onChange(parseFloat(val || '0'));
+        }
+      }
+    }}
+  />;
+}
+
 export function PercentageInput({ onChange, props, sx, value }: IAmountInputProps<number>) {
   const [inputAmountRaw, setInputAmountRaw] = useState((value === 0 ? '' : (value || '') + ''));
 

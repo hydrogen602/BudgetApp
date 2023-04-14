@@ -10,7 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveAsIcon from '@mui/icons-material/SaveAs';
 import { dialog } from '@tauri-apps/api';
 import { loadFromDisk, saveToDisk } from '../rust-invoke';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { SnackbarContext } from '../App';
 import { IncomeAndExpensesJson } from '../rust-types/IncomeAndExpensesJson';
 import { Divider } from '@mui/material';
@@ -21,11 +21,34 @@ interface IFileMenuProps {
   onExpenseEdit: () => void;
   getBudgetData: () => IncomeAndExpensesJson;
   setBudgetData: (_: IncomeAndExpensesJson) => void;
+  filename: string | null,
+  setFilename: (_: string | null) => void
 }
 
 
-export default function FileMenu({ getBudgetData, setBudgetData, onExpenseAdd, onExpenseEdit }: IFileMenuProps) {
-  const snackbar = useContext(SnackbarContext)
+export default function FileMenu({ getBudgetData, setBudgetData, onExpenseAdd, onExpenseEdit, filename, setFilename }: IFileMenuProps) {
+  const snackbar = useContext(SnackbarContext);
+
+
+
+  async function saveToFile(filename: string) {
+    try {
+      await saveToDisk(filename, getBudgetData());
+      setFilename(filename);
+    } catch (e) {
+      console.error(e);
+      snackbar(`Error saving file: ${e}`);
+    }
+  }
+
+  async function save() {
+    if (filename) {
+      saveToFile(filename);
+    }
+    else {
+      saveAs();
+    }
+  }
 
   async function saveAs() {
     const options: dialog.SaveDialogOptions = {
@@ -38,17 +61,11 @@ export default function FileMenu({ getBudgetData, setBudgetData, onExpenseAdd, o
         },
       ],
     };
+    const filenameResult = await dialog.save(options);
 
-    const result = await dialog.save(options);
-    if (result) {
-      console.log(`File path: ${result}`);
+    if (filenameResult) {
       // The user selected a file to save.
-      try {
-        return await saveToDisk(result, getBudgetData());
-      } catch (e) {
-        console.error(e);
-        snackbar(`Error saving file: ${e}`)
-      }
+      saveToFile(filenameResult);
     } else {
       // The user canceled the save dialog.
     }
@@ -67,17 +84,17 @@ export default function FileMenu({ getBudgetData, setBudgetData, onExpenseAdd, o
       multiple: false
     };
 
-    const result = await dialog.open(options);
-    if (result) {
-      console.log(`File path: ${result}`);
+    const filenameResult = await dialog.open(options);
+    if (filenameResult) {
       // The user selected a file to save.
       try {
-        const data = await loadFromDisk(result as string);
+        const data = await loadFromDisk(filenameResult as string);
         setBudgetData(data);
+        setFilename(filenameResult as string);
         return;
       } catch (e) {
         console.error(e);
-        snackbar(`Error saving file: ${e}`)
+        snackbar(`Error saving file: ${e}`);
       }
     } else {
       // The user canceled the save dialog.
@@ -88,7 +105,7 @@ export default function FileMenu({ getBudgetData, setBudgetData, onExpenseAdd, o
   return (
     // <Paper sx={{ width: 320, maxWidth: '100%' }}>
     <MenuList>
-      <MenuItem onClick={() => alert("Not implemented yet")}>
+      <MenuItem onClick={save}>
         <ListItemIcon>
           <SaveIcon fontSize="small" />
         </ListItemIcon>
