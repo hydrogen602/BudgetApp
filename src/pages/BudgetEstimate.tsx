@@ -178,7 +178,7 @@ function BudgetEstimate(props: {}) {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                }}>
+                }} key={name} >
                   {expenseEdit ? <IconButton sx={{
                     marginRight: '-1rem',
                   }} onClick={() => setExpenses(
@@ -204,7 +204,7 @@ function BudgetEstimate(props: {}) {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
-                }}>
+                }} key={name}>
                   {expenseEdit ? <IconButton sx={{
                     marginRight: '-1rem',
                   }} onClick={() => setExpenses(
