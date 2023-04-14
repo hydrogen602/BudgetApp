@@ -8,12 +8,13 @@ import DineroBuilder from "dinero.js";
 import './BudgetEstimate.css';
 
 import { Chart } from 'react-chartjs-2';
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FixedExpense, PercentExpense } from "../data";
-import { dialog } from "@tauri-apps/api";
 import FileMenu from "../components/FileMenu";
 import { IncomeAndExpensesJson } from "../rust-types/IncomeAndExpensesJson";
 import { ExpensesJson } from "../rust-types/ExpensesJson";
+import NewExpenseDialog from "../components/NewExpense";
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 
 interface IExpenses {
   [key: string]: FixedExpense | PercentExpense;
@@ -75,7 +76,24 @@ function BudgetEstimate(props: {}) {
 
   const [resetKey, setResetKey] = useState(0);
 
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const expenseNameList = useMemo(() => Object.keys(expenses), [expenses]);
+  const [expenseEdit, setExpenseEdit] = useState(false);
+
   return <>
+    <NewExpenseDialog
+      key={expenseDialogOpen + ''}
+      open={expenseDialogOpen}
+      onClose={() => setExpenseDialogOpen(false)}
+      allExpenses={expenseNameList}
+      newExpense={(name, expenseType) => {
+        if (expenseType === 'fixed') {
+          setExpenses({ ...expenses, [name]: new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })) });
+        } else if (expenseType === 'percent') {
+          setExpenses({ ...expenses, [name]: new PercentExpense(0) });
+        }
+      }}
+    />
     <AppBar position="static" sx={{
       marginBottom: '2rem',
     }}>
@@ -91,11 +109,16 @@ function BudgetEstimate(props: {}) {
           <MenuIcon />
         </IconButton>
         <Menu open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)} >
-          <FileMenu getBudgetData={() => getAllState(income, expenses)} setBudgetData={setBudgetData} />
+          <FileMenu
+            getBudgetData={() => getAllState(income, expenses)}
+            setBudgetData={setBudgetData}
+            onExpenseAdd={() => { setExpenseDialogOpen(true); setAnchorEl(null) }}
+            onExpenseEdit={() => { setExpenseEdit(true); setAnchorEl(null) }} />
         </Menu>
         <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>
           Budget Estimate
         </Typography>
+
       </Toolbar>
     </AppBar>
     <Box sx={{
@@ -125,21 +148,62 @@ function BudgetEstimate(props: {}) {
 
             {Object.entries(expenses).map(([name, expense]) => {
               if (expense instanceof FixedExpense) {
-                return <CurrencyInput value={expense.amount} key={name} sx={{
-                  margin: '1rem',
-                }} props={{
-                  label: name,
-                  size: 'small',
-                }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new FixedExpense(amount) } })} />;
+                return <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  {expenseEdit ? <IconButton sx={{
+                    marginRight: '-1rem',
+                  }} onClick={() => setExpenses(
+                    allExpenses => {
+                      const newExpenses = { ...allExpenses };
+                      delete newExpenses[name];
+                      return newExpenses;
+                    }
+                  )}>
+                    <RemoveCircleIcon color={'error'} />
+                  </IconButton> : null}
+                  <CurrencyInput value={expense.amount} key={name} sx={{
+                    margin: '1rem',
+                  }} props={{
+                    label: name,
+                    size: 'small',
+                  }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new FixedExpense(amount) } })} />
+
+                </Box>;
               } else if (expense instanceof PercentExpense) {
-                return <PercentageInput value={expense.percentage} key={name} sx={{
-                  margin: '1rem',
-                }} props={{
-                  label: name,
-                  size: 'small',
-                }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new PercentExpense(amount) } })} />;
+                return <Box sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  {expenseEdit ? <IconButton sx={{
+                    marginRight: '-1rem',
+                  }} onClick={() => setExpenses(
+                    allExpenses => {
+                      const newExpenses = { ...allExpenses };
+                      delete newExpenses[name];
+                      return newExpenses;
+                    }
+                  )}>
+                    <RemoveCircleIcon color={'error'} />
+                  </IconButton> : null}
+                  <PercentageInput value={expense.percentage} key={name} sx={{
+                    margin: '1rem',
+                  }} props={{
+                    label: name,
+                    size: 'small',
+                  }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new PercentExpense(amount) } })} />
+                </Box>;
               }
             })}
+
+            {expenseEdit ? <Button variant="outlined" sx={{ margin: '1rem' }}>
+              <Typography variant="body1" onClick={() => setExpenseEdit(false)}>Done editing expenses</Typography>
+            </Button> : null}
           </Paper>
         </div>
         <div className="sub-paper-box-2">
@@ -157,7 +221,6 @@ function BudgetEstimate(props: {}) {
                   }
                 ]
               }}
-
               />
             </div>
           </Paper>
