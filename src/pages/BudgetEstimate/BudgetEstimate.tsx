@@ -2,7 +2,7 @@ import { AppBar, Button, IconButton, Menu, Paper, Toolbar, Typography } from "@m
 import { Box } from "@mui/system";
 import MenuIcon from '@mui/icons-material/Menu';
 import TuneIcon from '@mui/icons-material/Tune';
-import { CurrencyInput, PercentageInput } from "../components/NumericInput";
+import { CurrencyInput, PercentageInput } from "../../components/NumericInput";
 import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
 import { appWindow } from "@tauri-apps/api/window";
@@ -12,85 +12,77 @@ import './BudgetEstimate.css';
 
 import { Chart } from 'react-chartjs-2';
 import { useContext, useEffect, useMemo, useState } from "react";
-import { FixedExpense, PercentExpense } from "../data";
-import FileMenu from "../components/FileMenu";
-import { IncomeAndExpensesJson } from "../rust-types/IncomeAndExpensesJson";
-import { ExpensesJson } from "../rust-types/ExpensesJson";
-import NewExpenseDialog from "../components/NewExpense";
+import { FixedExpense, PercentExpense } from "../../data";
+import FileMenu from "../../components/FileMenu";
+import { IncomeAndExpensesJson } from "../../rust-types/IncomeAndExpensesJson";
+import NewExpenseDialog from "../../components/NewExpense";
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
-import IncomeOptions from "../components/IncomeOptions";
-import { load, save, saveAs } from "../functions/fileOps";
-import { SnackbarContext } from "../App";
-import { isRegistered, registerAll, unregister } from "@tauri-apps/api/globalShortcut";
+import IncomeOptions from "../../components/IncomeOptions";
+import { load, save, saveAs } from "../../functions/fileOps";
+import { SnackbarContext } from "../../App";
+import { IExpenses, getAllState, useResetKey } from "./utils";
+import useIncomeExpenseReducer from "./stateReducer";
 
-interface IExpenses {
-  [key: string]: FixedExpense | PercentExpense;
-}
 
-function getAllState(income: Dinero, expenses: IExpenses): IncomeAndExpensesJson {
-  const transformedExpenses: ExpensesJson[] = [];
-  for (let [k, v] of Object.entries(expenses)) {
-    if (v instanceof FixedExpense) {
-      transformedExpenses.push({
-        Expense: [k, v.amount],
-      });
-    }
-    else if (v instanceof PercentExpense) {
-      transformedExpenses.push({
-        ExpensePercentage: [k, v.percentage],
-      });
-    }
-  }
 
-  return {
-    income: [income],
-    expenses: transformedExpenses,
-  };
-}
+// import { isRegistered, registerAll, unregister } from "@tauri-apps/api/globalShortcut";
+// const shortcuts = ['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'];
+// useEffect(() => {
+//   (async () => {
+//     console.log('Registering shortcuts');
+//     for (const shortcut of shortcuts) {
+//       if (await isRegistered(shortcut)) {
+//         await unregister(shortcut);
+//       }
+//     }
 
-const shortcuts = ['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'];
+//     await registerAll(['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'], (shortcut: string) => {
+//       console.log('shortcut!');
+//       switch (shortcut) {
+//         case 'CommandOrControl+Shift+S':
+//           saveAsHandler();
+//           break;
+//         case 'CommandOrControl+O':
+//           openHandler();
+//           break;
+//         case 'CommandOrControl+S':
+//           saveHandler();
+//           break;
+//       }
+//     })
+//   })();
+
+//   return () => {
+//     (async () => {
+//       console.log('unregistering shortcuts');
+//       for (const shortcut of shortcuts) {
+//         if (await isRegistered(shortcut)) {
+//           await unregister(shortcut);
+//         }
+//       }
+//     })();
+//   };
+// }, [filename, income, expenses]);
 
 
 
 function BudgetEstimate(props: {}) {
   const snackbar = useContext(SnackbarContext);
 
-  const [income, setIncome] = useState<Dinero>(DineroBuilder({ amount: 0, currency: 'USD' }));
-  const [expenses, setExpenses] = useState<IExpenses>({
-    'Savings': new PercentExpense(0),
-    'Donations': new PercentExpense(0),
-    'Monthly Rent': new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })),
-    'Monthly Groceries': new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })),
-  });
-
-
-  let netIncome = income;
-  for (const expensive of Object.values(expenses)) {
-    netIncome = netIncome.subtract(expensive.getAmount(income));
-  }
+  const [incomeExpensesState, stateModifer, computed] = useIncomeExpenseReducer();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   function setBudgetData(data: IncomeAndExpensesJson) {
-    setIncome(DineroBuilder(data.income[0]));
-    const newExpenses: IExpenses = {};
-    for (const expense of data.expenses) {
-      if (expense.Expense) {
-        newExpenses[expense.Expense[0]] = new FixedExpense(DineroBuilder(expense.Expense[1]));
-      }
-      else if (expense.ExpensePercentage) {
-        newExpenses[expense.ExpensePercentage[0]] = new PercentExpense(expense.ExpensePercentage[1]);
-      }
-    }
-    setExpenses(newExpenses);
-    setResetKey(key => key + 1);
+    stateModifer.setFromJson(data);
+    doResetKey();
     setAnchorEl(null);
   }
 
-  const [resetKey, setResetKey] = useState(0);
+  const [resetKey, doResetKey] = useResetKey();
+
 
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
-  const expenseNameList = useMemo(() => Object.keys(expenses), [expenses]);
   const [expenseEdit, setExpenseEdit] = useState(false);
 
   const [incomeOptsOpen, setIncomeOptsOpen] = useState(false);
@@ -110,7 +102,7 @@ function BudgetEstimate(props: {}) {
   const saveHandler = async () => {
     setAnchorEl(null);
     try {
-      let f = await save(filename, getAllState(income, expenses))
+      let f = await save(filename, getAllState(incomeExpensesState))
       setFilename(f);
       snackbar({ message: 'Saved', severity: 'success' });
     }
@@ -123,7 +115,7 @@ function BudgetEstimate(props: {}) {
   const saveAsHandler = async () => {
     setAnchorEl(null);
     try {
-      let f = await saveAs(getAllState(income, expenses))
+      let f = await saveAs(getAllState(incomeExpensesState))
       setFilename(f);
       snackbar({ message: 'Saved', severity: 'success' });
     }
@@ -147,61 +139,23 @@ function BudgetEstimate(props: {}) {
     }
   };
 
-  // useEffect(() => {
-  //   (async () => {
-  //     console.log('Registering shortcuts');
-  //     for (const shortcut of shortcuts) {
-  //       if (await isRegistered(shortcut)) {
-  //         await unregister(shortcut);
-  //       }
-  //     }
-
-  //     await registerAll(['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'], (shortcut: string) => {
-  //       console.log('shortcut!');
-  //       switch (shortcut) {
-  //         case 'CommandOrControl+Shift+S':
-  //           saveAsHandler();
-  //           break;
-  //         case 'CommandOrControl+O':
-  //           openHandler();
-  //           break;
-  //         case 'CommandOrControl+S':
-  //           saveHandler();
-  //           break;
-  //       }
-  //     })
-  //   })();
-
-  //   return () => {
-  //     (async () => {
-  //       console.log('unregistering shortcuts');
-  //       for (const shortcut of shortcuts) {
-  //         if (await isRegistered(shortcut)) {
-  //           await unregister(shortcut);
-  //         }
-  //       }
-  //     })();
-  //   };
-  // }, [filename, income, expenses]);
-
-
   return <>
     <NewExpenseDialog
       key={expenseDialogOpen + ''}
       open={expenseDialogOpen}
       onClose={() => setExpenseDialogOpen(false)}
-      allExpenses={expenseNameList}
+      allExpenses={computed.expenseNameList}
       newExpense={(name, expenseType) => {
         if (expenseType === 'fixed') {
-          setExpenses({ ...expenses, [name]: new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })) });
+          stateModifer.setExpense(name, new FixedExpense(DineroBuilder({ amount: 0, currency: 'USD' })));
         } else if (expenseType === 'percent') {
-          setExpenses({ ...expenses, [name]: new PercentExpense(0) });
+          stateModifer.setExpense(name, new PercentExpense(0));
         }
       }}
     />
     <IncomeOptions open={incomeOptsOpen} onClose={() => setIncomeOptsOpen(false)} setIncome={(income) => {
-      setIncome(income);
-      setResetKey(key => key + 1);
+      stateModifer.setIncome(income);
+      doResetKey();
     }} />
     <AppBar position="static" sx={{
       marginBottom: '2rem',
@@ -257,7 +211,7 @@ function BudgetEstimate(props: {}) {
               }} props={{
                 label: 'Monthly Income',
                 size: 'small',
-              }} onChange={setIncome} value={income} />
+              }} onChange={stateModifer.setIncome} value={incomeExpensesState.income} />
               <IconButton onClick={() => setIncomeOptsOpen(true)}>
                 <TuneIcon />
               </IconButton>
@@ -267,7 +221,7 @@ function BudgetEstimate(props: {}) {
           <Paper elevation={3} sx={{ padding: '1.5rem', margin: '1rem' }} className="paper-box">
             <Typography variant="h4">Expenses</Typography>
 
-            {Object.entries(expenses).map(([name, expense]) => {
+            {Object.entries(incomeExpensesState.expenses).map(([name, expense]) => {
               if (expense instanceof FixedExpense) {
                 return <Box sx={{
                   display: 'flex',
@@ -277,13 +231,7 @@ function BudgetEstimate(props: {}) {
                 }} key={name} >
                   {expenseEdit ? <IconButton sx={{
                     marginRight: '-1rem',
-                  }} onClick={() => setExpenses(
-                    allExpenses => {
-                      const newExpenses = { ...allExpenses };
-                      delete newExpenses[name];
-                      return newExpenses;
-                    }
-                  )}>
+                  }} onClick={() => stateModifer.removeExpense(name)}>
                     <RemoveCircleIcon color={'error'} />
                   </IconButton> : null}
                   <CurrencyInput value={expense.amount} key={name} sx={{
@@ -291,7 +239,7 @@ function BudgetEstimate(props: {}) {
                   }} props={{
                     label: name,
                     size: 'small',
-                  }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new FixedExpense(amount) } })} />
+                  }} onChange={amount => stateModifer.setExpense(name, new FixedExpense(amount))} />
 
                 </Box>;
               } else if (expense instanceof PercentExpense) {
@@ -303,13 +251,7 @@ function BudgetEstimate(props: {}) {
                 }} key={name}>
                   {expenseEdit ? <IconButton sx={{
                     marginRight: '-1rem',
-                  }} onClick={() => setExpenses(
-                    allExpenses => {
-                      const newExpenses = { ...allExpenses };
-                      delete newExpenses[name];
-                      return newExpenses;
-                    }
-                  )}>
+                  }} onClick={() => stateModifer.removeExpense(name)}>
                     <RemoveCircleIcon color={'error'} />
                   </IconButton> : null}
                   <PercentageInput value={expense.percentage} key={name} sx={{
@@ -317,7 +259,7 @@ function BudgetEstimate(props: {}) {
                   }} props={{
                     label: name,
                     size: 'small',
-                  }} onChange={amount => setExpenses(allExpenses => { return { ...allExpenses, [name]: new PercentExpense(amount) } })} />
+                  }} onChange={amount => stateModifer.setExpense(name, new PercentExpense(amount))} />
                 </Box>;
               }
             })}
@@ -330,15 +272,15 @@ function BudgetEstimate(props: {}) {
         <div className="sub-paper-box-2">
           <Paper elevation={3} sx={{ padding: '1.5rem', margin: '1rem' }}>
             <Typography variant="h4">Net Income</Typography>
-            <Typography variant="h4">{netIncome.toFormat('$0,0.00')}</Typography>
+            <Typography variant="h4">{computed.netIncome.toFormat('$0,0.00')}</Typography>
 
             <div className="donut-chart-box">
               <Chart className="donut-chart" type='doughnut' data={{
-                labels: [...Object.keys(expenses), 'Net Income'],
+                labels: [...computed.expenseNameList, 'Net Income'],
                 datasets: [
                   {
                     label: 'Expenses',
-                    data: [...Object.entries(expenses).map(([_, expense]) => expense.getAmount(income).getAmount() / 100), netIncome.getAmount() / 100],
+                    data: [...Object.entries(incomeExpensesState.expenses).map(([_, expense]) => expense.getAmount(incomeExpensesState.income).getAmount() / 100), computed.netIncome.getAmount() / 100],
                   }
                 ]
               }}

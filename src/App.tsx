@@ -1,5 +1,5 @@
 import "./App.css";
-import BudgetEstimate from "./pages/BudgetEstimate";
+import BudgetEstimate from "./pages/BudgetEstimate/BudgetEstimate";
 
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
