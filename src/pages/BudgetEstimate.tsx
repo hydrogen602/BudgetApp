@@ -5,11 +5,13 @@ import TuneIcon from '@mui/icons-material/Tune';
 import { CurrencyInput, PercentageInput } from "../components/NumericInput";
 import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
+import { appWindow } from "@tauri-apps/api/window";
+
 
 import './BudgetEstimate.css';
 
 import { Chart } from 'react-chartjs-2';
-import { useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { FixedExpense, PercentExpense } from "../data";
 import FileMenu from "../components/FileMenu";
 import { IncomeAndExpensesJson } from "../rust-types/IncomeAndExpensesJson";
@@ -17,6 +19,9 @@ import { ExpensesJson } from "../rust-types/ExpensesJson";
 import NewExpenseDialog from "../components/NewExpense";
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IncomeOptions from "../components/IncomeOptions";
+import { load, save, saveAs } from "../functions/fileOps";
+import { SnackbarContext } from "../App";
+import { isRegistered, registerAll, unregister } from "@tauri-apps/api/globalShortcut";
 
 interface IExpenses {
   [key: string]: FixedExpense | PercentExpense;
@@ -43,7 +48,13 @@ function getAllState(income: Dinero, expenses: IExpenses): IncomeAndExpensesJson
   };
 }
 
+const shortcuts = ['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'];
+
+
+
 function BudgetEstimate(props: {}) {
+  const snackbar = useContext(SnackbarContext);
+
   const [income, setIncome] = useState<Dinero>(DineroBuilder({ amount: 0, currency: 'USD' }));
   const [expenses, setExpenses] = useState<IExpenses>({
     'Savings': new PercentExpense(0),
@@ -86,6 +97,93 @@ function BudgetEstimate(props: {}) {
 
   const [filename, setFilename] = useState<string | null>(null);
 
+  useEffect(() => {
+    const lastPart = filename?.split('/').pop();
+
+    appWindow.setTitle(lastPart ? `Budget Estimate - ${lastPart}` : 'Budget Estimate');
+
+    return () => {
+      appWindow.setTitle('Budget Estimate');
+    }
+  }, [filename]);
+
+  const saveHandler = async () => {
+    setAnchorEl(null);
+    try {
+      let f = await save(filename, getAllState(income, expenses))
+      setFilename(f);
+      snackbar({ message: 'Saved', severity: 'success' });
+    }
+    catch (e) {
+      snackbar({ message: `Error saving file: ${e}`, severity: 'error' });
+      console.error(e);
+    }
+  };
+
+  const saveAsHandler = async () => {
+    setAnchorEl(null);
+    try {
+      let f = await saveAs(getAllState(income, expenses))
+      setFilename(f);
+      snackbar({ message: 'Saved', severity: 'success' });
+    }
+    catch (e) {
+      snackbar({ message: `Error saving file: ${e}`, severity: 'error' });
+      console.error(e);
+    }
+  };
+
+  const openHandler = async () => {
+    setAnchorEl(null);
+    try {
+      let [f, data] = await load();
+      setFilename(f);
+      setBudgetData(data);
+      snackbar({ message: 'Opened', severity: 'success' });
+    }
+    catch (e) {
+      snackbar({ message: `Error opening file: ${e}`, severity: 'error' });
+      console.error(e);
+    }
+  };
+
+  // useEffect(() => {
+  //   (async () => {
+  //     console.log('Registering shortcuts');
+  //     for (const shortcut of shortcuts) {
+  //       if (await isRegistered(shortcut)) {
+  //         await unregister(shortcut);
+  //       }
+  //     }
+
+  //     await registerAll(['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'], (shortcut: string) => {
+  //       console.log('shortcut!');
+  //       switch (shortcut) {
+  //         case 'CommandOrControl+Shift+S':
+  //           saveAsHandler();
+  //           break;
+  //         case 'CommandOrControl+O':
+  //           openHandler();
+  //           break;
+  //         case 'CommandOrControl+S':
+  //           saveHandler();
+  //           break;
+  //       }
+  //     })
+  //   })();
+
+  //   return () => {
+  //     (async () => {
+  //       console.log('unregistering shortcuts');
+  //       for (const shortcut of shortcuts) {
+  //         if (await isRegistered(shortcut)) {
+  //           await unregister(shortcut);
+  //         }
+  //       }
+  //     })();
+  //   };
+  // }, [filename, income, expenses]);
+
 
   return <>
     <NewExpenseDialog
@@ -121,13 +219,11 @@ function BudgetEstimate(props: {}) {
         </IconButton>
         <Menu open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)} >
           <FileMenu
-            setFilename={setFilename}
-            filename={filename}
-            getBudgetData={() => getAllState(income, expenses)}
-            setBudgetData={setBudgetData}
+            openHandler={openHandler}
+            saveHandler={saveHandler}
+            saveAsHandler={saveAsHandler}
             onExpenseAdd={() => { setExpenseDialogOpen(true); setAnchorEl(null) }}
             onExpenseEdit={() => { setExpenseEdit(true); setAnchorEl(null) }}
-
           />
         </Menu>
         <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>

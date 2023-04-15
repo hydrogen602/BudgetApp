@@ -14,20 +14,25 @@ import { createContext, useState } from "react";
 // import { useEffect } from "react";
 // import { invoke } from "@tauri-apps/api";
 
-export const SnackbarContext = createContext<(_: string) => void>((_) => { });
+export interface SnackbarMessage {
+  message: string;
+  severity: 'error' | 'warning' | 'info' | 'success';
+}
+
+export const SnackbarContext = createContext<(_: SnackbarMessage) => void>((_) => { });
 
 
 function App() {
-  const [error, setError] = useState<null | string>(null);
+  const [msg, setMsg] = useState<null | SnackbarMessage>(null);
 
   return (
-    <SnackbarContext.Provider value={setError}>
+    <SnackbarContext.Provider value={setMsg}>
       <div className="app">
         <BudgetEstimate />
       </div>
-      <Snackbar open={Boolean(error)} autoHideDuration={6000} onClose={() => setError(null)}>
-        <Alert onClose={() => setError(null)} severity="error" sx={{ width: '100%' }}>
-          {error}
+      <Snackbar open={Boolean(msg)} autoHideDuration={6000} onClose={() => setMsg(null)}>
+        <Alert onClose={() => setMsg(null)} severity={msg?.severity} sx={{ width: '100%' }}>
+          {msg?.message}
         </Alert>
       </Snackbar>
     </SnackbarContext.Provider>
