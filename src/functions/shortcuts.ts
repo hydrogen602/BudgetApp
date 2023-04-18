@@ -1,4 +1,4 @@
-import { isRegistered, registerAll, unregister, register } from "@tauri-apps/api/globalShortcut";
+import { isRegistered, unregister, register } from "@tauri-apps/api/globalShortcut";
 import { useEffect, useRef } from "react";
 
 

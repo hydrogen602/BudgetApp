@@ -15,13 +15,13 @@ translate-rust-ts-marker: src-tauri/src/bin/export_schemas.rs src-tauri/src/tran
 	touch translate-rust-ts-marker
 
 build:
-	npm run tauri build
+	CI=true npm run tauri build
 
 build-all: build-darwin-arm64 build-darwin-x86
 
 # this is on a M1 mac
 build-darwin-arm64:
-	npm run tauri build -- --target arm64-apple-darwin
+	CI=true npm run tauri build -- --target arm64-apple-darwin
 
 build-darwin-x86:
-	npm run tauri build -- --target x86_64-apple-darwin
+	CI=true npm run tauri build -- --target x86_64-apple-darwin

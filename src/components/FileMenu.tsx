@@ -17,15 +17,23 @@ interface IFileMenuProps {
   saveHandler: () => void;
   saveAsHandler: () => void;
   openHandler: () => void;
+  onClose: () => void;
 }
 
 
-export default function FileMenu({ saveHandler, saveAsHandler, openHandler, onExpenseAdd, onExpenseEdit }: IFileMenuProps) {
+export default function FileMenu({ onClose, saveHandler, saveAsHandler, openHandler, onExpenseAdd, onExpenseEdit }: IFileMenuProps) {
+
+  const wrapWithClose = (handler: () => void) => {
+    return () => {
+      onClose();
+      handler();
+    };
+  }
 
   return (
     // <Paper sx={{ width: 320, maxWidth: '100%' }}>
     <MenuList>
-      <MenuItem onClick={saveHandler}>
+      <MenuItem onClick={wrapWithClose(saveHandler)}>
         <ListItemIcon>
           <SaveIcon fontSize="small" />
         </ListItemIcon>
@@ -33,7 +41,7 @@ export default function FileMenu({ saveHandler, saveAsHandler, openHandler, onEx
           Save
         </ListItemText>
       </MenuItem>
-      <MenuItem onClick={saveAsHandler}>
+      <MenuItem onClick={wrapWithClose(saveAsHandler)}>
         <ListItemIcon>
           <SaveAsIcon fontSize="small" />
         </ListItemIcon>
@@ -41,7 +49,7 @@ export default function FileMenu({ saveHandler, saveAsHandler, openHandler, onEx
           Save As...
         </ListItemText>
       </MenuItem>
-      <MenuItem onClick={openHandler}>
+      <MenuItem onClick={wrapWithClose(openHandler)}>
         <ListItemIcon>
           <FileOpenIcon fontSize="small" />
         </ListItemIcon>
@@ -50,7 +58,7 @@ export default function FileMenu({ saveHandler, saveAsHandler, openHandler, onEx
         </ListItemText>
       </MenuItem>
       <Divider />
-      <MenuItem onClick={onExpenseAdd}>
+      <MenuItem onClick={wrapWithClose(onExpenseAdd)}>
         <ListItemIcon>
           <AddIcon fontSize='small' />
         </ListItemIcon>
@@ -58,7 +66,7 @@ export default function FileMenu({ saveHandler, saveAsHandler, openHandler, onEx
           New Expense
         </ListItemText>
       </MenuItem>
-      <MenuItem onClick={onExpenseEdit}>
+      <MenuItem onClick={wrapWithClose(onExpenseEdit)}>
         <ListItemIcon>
           <EditIcon fontSize='small' />
         </ListItemIcon>

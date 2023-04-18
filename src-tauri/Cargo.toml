@@ -1,5 +1,6 @@
 [package]
 name = "budgeting"
+default-run = "budgeting"
 version = "0.0.0"
 description = "A Tauri App"
 authors = ["Jonathan Rotter (hydrogen602)"]

@@ -101,7 +101,6 @@ function BudgetEstimate(props: {}) {
   }, [filename]);
 
   const saveHandler = async () => {
-    setAnchorEl(null);
     try {
       let f = await save(filename, getAllState(incomeExpensesState))
       setFilename(f);
@@ -114,7 +113,6 @@ function BudgetEstimate(props: {}) {
   };
 
   const saveAsHandler = async () => {
-    setAnchorEl(null);
     try {
       let f = await saveAs(getAllState(incomeExpensesState))
       setFilename(f);
@@ -127,7 +125,6 @@ function BudgetEstimate(props: {}) {
   };
 
   const openHandler = async () => {
-    setAnchorEl(null);
     try {
       let [f, data] = await load();
       setFilename(f);
@@ -178,11 +175,12 @@ function BudgetEstimate(props: {}) {
         </IconButton>
         <Menu open={Boolean(anchorEl)} anchorEl={anchorEl} onClose={() => setAnchorEl(null)} >
           <FileMenu
+            onClose={() => setAnchorEl(null)}
             openHandler={openHandler}
             saveHandler={saveHandler}
             saveAsHandler={saveAsHandler}
-            onExpenseAdd={() => { setExpenseDialogOpen(true); setAnchorEl(null) }}
-            onExpenseEdit={() => { setExpenseEdit(true); setAnchorEl(null) }}
+            onExpenseAdd={() => setExpenseDialogOpen(true)}
+            onExpenseEdit={() => setExpenseEdit(true)}
           />
         </Menu>
         <Typography variant="h3" component="div" sx={{ flexGrow: 1 }}>
@@ -197,9 +195,6 @@ function BudgetEstimate(props: {}) {
       alignItems: 'center',
       justifyContent: 'center',
     }} key={resetKey}>
-
-      <Typography variant="h2"></Typography>
-      {/* <Button onClick={save}>Stuff</Button> */}
 
       <div className="main-paper-box">
         <div className="sub-paper-box-1">
@@ -278,7 +273,13 @@ function BudgetEstimate(props: {}) {
             <Typography variant="h4">Net Income</Typography>
             <Typography variant="h4">{computed.netIncome.toFormat('$0,0.00')}</Typography>
 
-            <div className="donut-chart-box">
+            <div className="donut-chart-box" style={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              alignContent: 'center',
+            }}>
               <Chart className="donut-chart" type='doughnut' data={{
                 labels: [...computed.expenseNameList, 'Net Income'],
                 datasets: [
@@ -290,6 +291,8 @@ function BudgetEstimate(props: {}) {
               }}
               />
             </div>
+            {incomeExpensesState.expenses['Savings'] ? <Typography variant="body1">Savings per year: {incomeExpensesState.expenses['Savings'].getAmount(incomeExpensesState.income).multiply(12).toFormat('$0,0.00')}</Typography> : null}
+
           </Paper>
         </div>
       </div>
