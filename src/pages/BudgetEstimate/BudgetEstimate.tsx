@@ -23,48 +23,7 @@ import { SnackbarContext } from "../../App";
 import { getAllState, useResetKey } from "./utils";
 import useIncomeExpenseReducer from "./stateReducer";
 import useShortcut from "../../functions/shortcuts";
-
-
-
-// const shortcuts = ['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'];
-// useEffect(() => {
-//   (async () => {
-//     console.log('Registering shortcuts');
-//     for (const shortcut of shortcuts) {
-//       if (await isRegistered(shortcut)) {
-//         await unregister(shortcut);
-//       }
-//     }
-
-//     await registerAll(['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'], (shortcut: string) => {
-//       console.log('shortcut!');
-//       switch (shortcut) {
-//         case 'CommandOrControl+Shift+S':
-//           saveAsHandler();
-//           break;
-//         case 'CommandOrControl+O':
-//           openHandler();
-//           break;
-//         case 'CommandOrControl+S':
-//           saveHandler();
-//           break;
-//       }
-//     })
-//   })();
-
-//   return () => {
-//     (async () => {
-//       console.log('unregistering shortcuts');
-//       for (const shortcut of shortcuts) {
-//         if (await isRegistered(shortcut)) {
-//           await unregister(shortcut);
-//         }
-//       }
-//     })();
-//   };
-// }, [filename, income, expenses]);
-
-
+import BottomNav from "../../components/BottomNav";
 
 
 function BudgetEstimate(props: {}) {
@@ -137,9 +96,10 @@ function BudgetEstimate(props: {}) {
     }
   };
 
-  useShortcut('CommandOrControl+Shift+S', saveAsHandler);
-  useShortcut('CommandOrControl+O', openHandler);
-  useShortcut('CommandOrControl+S', saveHandler);
+  // TODO: re-enable shortcuts
+  // useShortcut('CommandOrControl+Shift+S', saveAsHandler);
+  // useShortcut('CommandOrControl+O', openHandler);
+  // useShortcut('CommandOrControl+S', saveHandler);
 
   return <>
     <NewExpenseDialog
@@ -298,6 +258,7 @@ function BudgetEstimate(props: {}) {
       </div>
 
     </Box>
+    <BottomNav />
   </>;
 }
 
