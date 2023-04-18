@@ -3,7 +3,7 @@ import { Box } from "@mui/system";
 import MenuIcon from '@mui/icons-material/Menu';
 import TuneIcon from '@mui/icons-material/Tune';
 import { CurrencyInput, PercentageInput } from "../../components/NumericInput";
-import { Dinero } from "dinero.js";
+// import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
 import { appWindow } from "@tauri-apps/api/window";
 
@@ -11,7 +11,7 @@ import { appWindow } from "@tauri-apps/api/window";
 import './BudgetEstimate.css';
 
 import { Chart } from 'react-chartjs-2';
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FixedExpense, PercentExpense } from "../../data";
 import FileMenu from "../../components/FileMenu";
 import { IncomeAndExpensesJson } from "../../rust-types/IncomeAndExpensesJson";
@@ -20,12 +20,12 @@ import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import IncomeOptions from "../../components/IncomeOptions";
 import { load, save, saveAs } from "../../functions/fileOps";
 import { SnackbarContext } from "../../App";
-import { IExpenses, getAllState, useResetKey } from "./utils";
+import { getAllState, useResetKey } from "./utils";
 import useIncomeExpenseReducer from "./stateReducer";
+import useShortcut from "../../functions/shortcuts";
 
 
 
-// import { isRegistered, registerAll, unregister } from "@tauri-apps/api/globalShortcut";
 // const shortcuts = ['CommandOrControl+Shift+S', 'CommandOrControl+O', 'CommandOrControl+S'];
 // useEffect(() => {
 //   (async () => {
@@ -63,6 +63,7 @@ import useIncomeExpenseReducer from "./stateReducer";
 //     })();
 //   };
 // }, [filename, income, expenses]);
+
 
 
 
@@ -138,6 +139,10 @@ function BudgetEstimate(props: {}) {
       console.error(e);
     }
   };
+
+  useShortcut('CommandOrControl+Shift+S', saveAsHandler);
+  useShortcut('CommandOrControl+O', openHandler);
+  useShortcut('CommandOrControl+S', saveHandler);
 
   return <>
     <NewExpenseDialog
@@ -217,7 +222,6 @@ function BudgetEstimate(props: {}) {
               </IconButton>
             </Box>
           </Paper>
-
           <Paper elevation={3} sx={{ padding: '1.5rem', margin: '1rem' }} className="paper-box">
             <Typography variant="h4">Expenses</Typography>
 
