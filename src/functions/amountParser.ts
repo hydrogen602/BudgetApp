@@ -3,7 +3,7 @@ import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
 
 export function parseDate(dateStr: string): Dayjs {
-  // TODO: pick data format
+  // TODO: pick date format
   const date = dayjs(dateStr, 'MM/DD/YYYY', true);
   if (!date.isValid()) {
     throw new Error(`Invalid date: ${dateStr}`);
