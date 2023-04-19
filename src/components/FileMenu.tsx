@@ -12,11 +12,11 @@ import { Divider } from '@mui/material';
 
 
 interface IFileMenuProps {
-  onExpenseAdd: () => void;
-  onExpenseEdit: () => void;
-  saveHandler: () => void;
-  saveAsHandler: () => void;
-  openHandler: () => void;
+  onExpenseAdd?: () => void;
+  onExpenseEdit?: () => void;
+  saveHandler?: () => void;
+  saveAsHandler?: () => void;
+  openHandler?: () => void;
   onClose: () => void;
 }
 
@@ -33,47 +33,47 @@ export default function FileMenu({ onClose, saveHandler, saveAsHandler, openHand
   return (
     // <Paper sx={{ width: 320, maxWidth: '100%' }}>
     <MenuList>
-      <MenuItem onClick={wrapWithClose(saveHandler)}>
+      {saveHandler ? <MenuItem onClick={wrapWithClose(saveHandler)}>
         <ListItemIcon>
           <SaveIcon fontSize="small" />
         </ListItemIcon>
         <ListItemText>
           Save
         </ListItemText>
-      </MenuItem>
-      <MenuItem onClick={wrapWithClose(saveAsHandler)}>
+      </MenuItem> : null}
+      {saveAsHandler ? <MenuItem onClick={wrapWithClose(saveAsHandler)}>
         <ListItemIcon>
           <SaveAsIcon fontSize="small" />
         </ListItemIcon>
         <ListItemText>
           Save As...
         </ListItemText>
-      </MenuItem>
-      <MenuItem onClick={wrapWithClose(openHandler)}>
+      </MenuItem> : null}
+      {openHandler ? <MenuItem onClick={wrapWithClose(openHandler)}>
         <ListItemIcon>
           <FileOpenIcon fontSize="small" />
         </ListItemIcon>
         <ListItemText>
           Open...
         </ListItemText>
-      </MenuItem>
-      <Divider />
-      <MenuItem onClick={wrapWithClose(onExpenseAdd)}>
+      </MenuItem> : null}
+      {onExpenseAdd || onExpenseEdit ? <Divider /> : null}
+      {onExpenseAdd ? <MenuItem onClick={wrapWithClose(onExpenseAdd)}>
         <ListItemIcon>
           <AddIcon fontSize='small' />
         </ListItemIcon>
         <ListItemText>
           New Expense
         </ListItemText>
-      </MenuItem>
-      <MenuItem onClick={wrapWithClose(onExpenseEdit)}>
+      </MenuItem> : null}
+      {onExpenseEdit ? <MenuItem onClick={wrapWithClose(onExpenseEdit)}>
         <ListItemIcon>
           <EditIcon fontSize='small' />
         </ListItemIcon>
         <ListItemText>
           Edit Expenses
         </ListItemText>
-      </MenuItem>
+      </MenuItem> : null}
     </MenuList >
   ); /* </Paper> */
 }

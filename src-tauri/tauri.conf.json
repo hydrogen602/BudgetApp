@@ -24,6 +24,9 @@
       "globalShortcut": {
         "all": true
       },
+      "fs": {
+        "readFile": true
+      },
       "window": {
         "all": false,
         "center": false,
