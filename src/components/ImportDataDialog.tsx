@@ -4,11 +4,13 @@ import { useContext, useEffect, useReducer, useState } from "react";
 import { dialog, fs } from "@tauri-apps/api";
 import { parse as parseCSV } from "csv-parse/browser/esm/sync";
 import { SnackbarContext } from "../App";
+import { IStandardRecord, IStandardRecords, parseStandardRecord } from "../pages/Records";
 
 
 interface IImportDataDialogProps extends Openable {
-  onSubmit: (columnMapping: IColumnMapping, data: CSVRecords) => void,
+  onSubmit: (data: IStandardRecords) => void,
 }
+
 
 
 interface IColumnMapping {
@@ -102,11 +104,26 @@ export default function ImportDataDialog({ open, onClose, onSubmit }: IImportDat
     }
   }, [open]);
 
-  // useEffect(() => {
-  //   if (rawRecords) {
-  //     TODO: if some column has the same name as a field, set it automatically
-  //   }
-  // }, [rawRecords])
+  useEffect(() => {
+    if (recordsHeaders) {
+      // if some column has the same name as a field, set it automatically
+      recordsHeaders.forEach((header) => {
+        let lowerHeader = header.toLowerCase();
+        if (lowerHeader === 'amount' && !columnMapping.Amount) {
+          updateColumnMapping({ field: 'Amount', value: header });
+        }
+        if (lowerHeader === 'date' && !columnMapping.Date) {
+          updateColumnMapping({ field: 'Date', value: header });
+        }
+        if (lowerHeader === 'category' && !columnMapping.Category) {
+          updateColumnMapping({ field: 'Category', value: header });
+        }
+        if (lowerHeader === 'description' && !columnMapping.Description) {
+          updateColumnMapping({ field: 'Description', value: header });
+        }
+      });
+    }
+  }, [recordsHeaders]);
 
   const [columnMapping, updateColumnMapping] = useReducer(stateReducer, { Amount: null, Date: null, Category: null, Description: null });
 
@@ -178,11 +195,19 @@ export default function ImportDataDialog({ open, onClose, onSubmit }: IImportDat
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={() => {
-          if (rawRecords) {
+          if (recordsData) {
             onClose();
-            onSubmit(columnMapping, rawRecords);
+
+            onSubmit(recordsData.map((record, i) => {
+              const id = `idx_${i}`;
+              return parseStandardRecord(
+                record[columnMapping.Amount || ''],
+                record[columnMapping.Date || ''],
+                record[columnMapping.Category || ''],
+                record[columnMapping.Description || ''], id);
+            }));
           } else {
-            console.assert(false, "rawRecords is null in ImportDataDialog");
+            console.assert(false, "recordsData or value of columnMapping is null in ImportDataDialog");
           }
         }} variant="contained" disabled={!Object.values(columnMapping).every(e => e) || !rawRecords}>Import</Button>
       </DialogActions>
