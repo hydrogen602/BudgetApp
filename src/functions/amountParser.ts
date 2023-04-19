@@ -1,8 +1,14 @@
+import dayjs, { Dayjs } from "dayjs";
 import { Dinero } from "dinero.js";
 import DineroBuilder from "dinero.js";
 
-function isOneOf(value: any, acceptable: any[]): boolean {
-  return acceptable.some(a => a === value);
+export function parseDate(dateStr: string): Dayjs {
+  // TODO: pick data format
+  const date = dayjs(dateStr, 'MM/DD/YYYY', true);
+  if (!date.isValid()) {
+    throw new Error(`Invalid date: ${dateStr}`);
+  }
+  return date;
 }
 
 export function parseAmount(amountStr: string): Dinero {

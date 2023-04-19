@@ -39,8 +39,9 @@ function stateReducer(state: IColumnMapping, action: { field: IColumnNames, valu
   }
 
   // check that the field is valid
-  console.assert(newState[action.field] !== undefined,
-    `Invalid field ${action.field} in stateReducer`);
+  if (newState[action.field] === undefined) {
+    throw new Error(`Invalid field ${action.field} in stateReducer`);
+  }
   newState[action.field] = action.value;
 
   return newState;
@@ -198,16 +199,24 @@ export default function ImportDataDialog({ open, onClose, onSubmit }: IImportDat
           if (recordsData) {
             onClose();
 
-            onSubmit(recordsData.map((record, i) => {
-              const id = `idx_${i}`;
-              return parseStandardRecord(
-                record[columnMapping.Amount || ''],
-                record[columnMapping.Date || ''],
-                record[columnMapping.Category || ''],
-                record[columnMapping.Description || ''], id);
-            }));
+            try {
+              const parsedData = recordsData.map((record, i) => {
+                const id = `idx_${i}`;
+                return parseStandardRecord(
+                  record[columnMapping.Amount || ''],
+                  record[columnMapping.Date || ''],
+                  record[columnMapping.Category || ''],
+                  record[columnMapping.Description || ''], id);
+              });
+
+              onSubmit(parsedData);
+            }
+            catch (e) {
+              snackbar({ message: `Failed to parse data: ${e}`, severity: 'error' });
+              console.error(e);
+            }
           } else {
-            console.assert(false, "recordsData or value of columnMapping is null in ImportDataDialog");
+            throw new Error("recordsData or value in columnMapping is null in ImportDataDialog");
           }
         }} variant="contained" disabled={!Object.values(columnMapping).every(e => e) || !rawRecords}>Import</Button>
       </DialogActions>

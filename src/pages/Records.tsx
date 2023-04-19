@@ -7,25 +7,24 @@ import { SnackbarContext } from "../App";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
 import ImportDataDialog from "../components/ImportDataDialog";
 import { useResetKey } from "./BudgetEstimate/utils";
-// import { DataGrid } from '@mui/x-data-grid';
 
 import { Dinero } from "dinero.js";
-import DineroBuilder from "dinero.js";
 import { Dayjs } from "dayjs";
-import { parseAmount } from "../functions/amountParser";
+import { parseAmount, parseDate } from "../functions/amountParser";
 
 export interface IStandardRecord {
   'Amount': Dinero,
-  'Date': string, // TODO: change to Dayjs
+  'Date': Dayjs,
   'Category': string,
   'Description': string,
   'id': string,
 }
 
 export function parseStandardRecord(amount: string, date: string, category: string, description: string, id: string) {
+
   return {
     'Amount': parseAmount(amount),
-    'Date': date,
+    'Date': parseDate(date),
     'Category': category,
     'Description': description,
     'id': id,
@@ -38,7 +37,7 @@ export type IStandardRecords = IStandardRecord[];
 
 
 const columns: GridColDef[] = [
-  { field: 'Date', headerName: 'Date', width: 100 },
+  { field: 'Date', headerName: 'Date', width: 150, valueFormatter: ({ value }) => value.format('MMM D, YYYY') },
   { field: 'Description', headerName: 'Description', flex: 1 },
   { field: 'Amount', headerName: 'Amount', width: 100, valueFormatter: ({ value }) => value.toFormat('$0,0.00'), sortComparator: (v1: Dinero, v2: Dinero) => v1.subtract(v2).getAmount() },
   { field: 'Category', headerName: 'Category', flex: 1 },
@@ -58,7 +57,6 @@ export default function Records() {
   useEffect(() => {
     if (records) {
       snackbar({ 'message': `Loaded ${records.length} records`, 'severity': 'success' });
-      console.log(records[0]);
     }
   }, [records]);
 
