@@ -6,9 +6,9 @@ use schemars::JsonSchema;
 
 #[derive(serde::Deserialize, serde::Serialize, JsonSchema, Debug)]
 pub struct MoneyJson {
-    amount: i32,
-    currency: String,
-    precision: u8,
+    pub amount: i32,
+    pub currency: String,
+    pub precision: u8,
 }
 
 impl Default for MoneyJson {
@@ -71,3 +71,7 @@ impl IncomeAndExpensesJson {
         Ok(data)
     }
 }
+
+#[derive(serde::Deserialize, serde::Serialize, JsonSchema, Debug)]
+/// date: String, description: String, amount: MoneyJson, category: String
+pub struct TransactionJson(pub String, pub String, pub MoneyJson, pub String);

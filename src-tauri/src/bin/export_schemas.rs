@@ -1,7 +1,7 @@
 use budgeting::{
     self,
     data::Percentage,
-    transfer_data::{ExpensesJson, IncomeAndExpensesJson, IncomeJson, MoneyJson},
+    transfer_data::{ExpensesJson, IncomeAndExpensesJson, IncomeJson, MoneyJson, TransactionJson},
     util::type_name_last,
 };
 use schemars::{schema_for, JsonSchema};
@@ -18,4 +18,5 @@ fn main() {
     schema_for_one::<IncomeJson>();
     schema_for_one::<IncomeAndExpensesJson>();
     schema_for_one::<Percentage>();
+    schema_for_one::<TransactionJson>();
 }

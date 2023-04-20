@@ -11,13 +11,14 @@ import { useResetKey } from "./BudgetEstimate/utils";
 import { Dinero } from "dinero.js";
 import { Dayjs } from "dayjs";
 import { parseAmount, parseDate } from "../functions/amountParser";
+import { saveNewTransactions } from "../rust-invoke";
 
 export interface IStandardRecord {
-  'Amount': Dinero,
-  'Date': Dayjs,
-  'Category': string,
-  'Description': string,
-  'id': string,
+  Amount: Dinero,
+  Date: Dayjs,
+  Category: string,
+  Description: string,
+  id: string,
 }
 
 export function parseStandardRecord(amount: string, date: string, category: string, description: string, id: string) {
@@ -104,13 +105,13 @@ export default function Records() {
   const [importOpen, setImportOpen] = useState(false);
 
   // const [records, updateRecords] = useReducer(recordsReducer, { inner: null } as IStandardRecordsContainer);
-  const [records, setRecords] = useState<IStandardRecords | null>(null);
+  // const [records, setRecords] = useState<IStandardRecords | null>(null);
 
-  useEffect(() => {
-    if (records) {
-      snackbar({ 'message': `Loaded ${records?.length} records`, severity: 'success' });
-    }
-  }, [records]);
+  // useEffect(() => {
+  //   if (records) {
+  //     snackbar({ 'message': `Loaded ${records?.length} records`, severity: 'success' });
+  //   }
+  // }, [records]);
 
 
   return (<>
@@ -118,7 +119,17 @@ export default function Records() {
       key={resetKey}
       open={importOpen}
       onClose={() => setImportOpen(false)}
-      onSubmit={setRecords} />
+      onSubmit={async (data) => {
+        try {
+          console.log(data);
+          await saveNewTransactions(data);
+          snackbar({ 'message': `Successfully imported ${data.length} transactions`, severity: 'success' });
+        }
+        catch (e) {
+          snackbar({ 'message': `Failed to import transactions: ${e}`, severity: 'error' });
+          console.error(e);
+        }
+      }} />
     <AppBar position="static" sx={{
       marginBottom: '2rem',
     }}>
@@ -154,15 +165,6 @@ export default function Records() {
     }}>
       idk
     </Paper>
-    <Box sx={{ height: 400, width: '100%', paddingBottom: '2rem' }}>
-      <DataGrid
-        columns={columns}
-        rows={records || []}
-        sx={{
-          margin: '1rem',
-        }}
-      />
-    </Box>
     <BottomNav />
   </>
   );
