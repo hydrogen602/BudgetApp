@@ -27,3 +27,4 @@ dist-ssr
 src-tauri/schemas/
 src/rust-types/
 src-tauri/Untitled.json
+translate-rust-ts-marker
