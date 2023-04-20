@@ -1,59 +1,25 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, InputLabel, MenuItem, Select, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Step, StepLabel, Stepper, Typography } from "@mui/material";
 import { Openable } from "./commonTypes";
-import { useContext, useEffect, useReducer, useState } from "react";
+import { useCallback, useContext, useEffect, useReducer, useRef } from "react";
 import { dialog, fs } from "@tauri-apps/api";
 import { parse as parseCSV } from "csv-parse/browser/esm/sync";
-import { SnackbarContext } from "../App";
+import { SnackbarContext, SnackbarMessage } from "../App";
 import { IStandardRecord, IStandardRecords, parseStandardRecord } from "../pages/Records";
+import { DataGrid, GridColDef, useGridApiRef } from "@mui/x-data-grid";
+import { Dinero } from "dinero.js";
+import ColumnMapper, { CSVHeaders, CSVRecord, CSVRecords, IColumnMapping } from "./ColumnMapper";
 
 
 interface IImportDataDialogProps extends Openable {
   onSubmit: (data: IStandardRecords) => void,
 }
 
-
-
-interface IColumnMapping {
-  'Amount': string | null,
-  'Date': string | null,
-  'Category': string | null,
-  'Description': string | null,
-}
-type IColumnNames = keyof IColumnMapping;
-
-function stateReducer(state: IColumnMapping, action: { field: IColumnNames, value: string | null }): IColumnMapping {
-  // IColumnMapping should be a one-to-one mapping,
-  // so if the value set is already used, reset it
-
-  const newState: IColumnMapping = { ...state };
-  if (action.value) {
-    // I want to set any field to null if it has the same value as the given value
-    let field: IColumnNames;
-    // this is stupid but Object.keys returns string[], not keyof IColumnMapping
-    for (field of (Object.keys(newState) as any)) {
-      if (newState[field] === action.value) {
-        // if we already used the value somewhere, reset it
-        newState[field] = null;
-      }
-    }
-  }
-
-  // check that the field is valid
-  if (newState[action.field] === undefined) {
-    throw new Error(`Invalid field ${action.field} in stateReducer`);
-  }
-  newState[action.field] = action.value;
-
-  return newState;
-}
-
-interface CSVRecord {
-  [key: string]: string;
-}
-
-type CSVHeaders = string[];
-
-type CSVRecords = [CSVRecord[], CSVHeaders];
+const columns: GridColDef[] = [
+  { field: 'Date', headerName: 'Date', width: 150, valueFormatter: ({ value }) => value.format('MMM D, YYYY') },
+  { field: 'Description', headerName: 'Description', flex: 1, editable: true },
+  { field: 'Amount', headerName: 'Amount', width: 100, valueFormatter: ({ value }) => value.toFormat('$0,0.00'), sortComparator: (v1: Dinero, v2: Dinero) => v1.subtract(v2).getAmount() },
+  { field: 'Category', headerName: 'Category', flex: 1, editable: true },
+];
 
 async function loadRecords(): Promise<CSVRecords> {
   const options: dialog.OpenDialogOptions = {
@@ -68,6 +34,7 @@ async function loadRecords(): Promise<CSVRecords> {
     multiple: false
   };
 
+
   const filenameResult = await dialog.open(options);
   if (filenameResult) {
     // The user selected a file to save.
@@ -78,24 +45,84 @@ async function loadRecords(): Promise<CSVRecords> {
 
     return [data, headers];
   } else {
-    throw "User canceled open dialog";
+    throw new Error("User canceled open dialog");
+  }
+}
+
+type IImportState = {
+  activeStep: 0
+} | {
+  activeStep: 1,
+  rawRecordsData: CSVRecord[],
+  rawRecordsHeaders: CSVHeaders,
+} | {
+  activeStep: 2,
+  records: IStandardRecord[],
+};
+
+type IImportAction = {
+  type: 'loadRawRecords',
+  data: CSVRecord[],
+  headers: CSVHeaders,
+} | {
+  type: 'remapRecords',
+  columnMapping: IColumnMapping,
+};
+
+function importReducerRaw(state: IImportState, action: IImportAction, snackbar: (_: SnackbarMessage) => void): IImportState {
+  try {
+    switch (action.type) {
+      case 'loadRawRecords':
+        if (state.activeStep !== 0) throw new Error(`Invalid state transition from ${state.activeStep} to ${1} in importReducer`);
+        return {
+          activeStep: 1,
+          rawRecordsData: action.data,
+          rawRecordsHeaders: action.headers,
+        };
+      case 'remapRecords':
+        if (state.activeStep !== 1) throw new Error(`Invalid state transition from ${state.activeStep} to ${2} in importReducer`);
+        const parsedData = state.rawRecordsData.map((record, i) => {
+          const id = `idx_${i}`;
+          return parseStandardRecord(
+            record[action.columnMapping.Amount || ''],
+            record[action.columnMapping.Date || ''],
+            record[action.columnMapping.Category || ''],
+            record[action.columnMapping.Description || ''],
+            id
+          );
+        });
+
+        return {
+          activeStep: 2,
+          records: parsedData,
+        };
+      default:
+        throw new Error(`Invalid action type ${action} in importReducer`);
+    }
+  }
+  catch (e) {
+    snackbar({ message: `Failed to parse data: ${e}`, severity: 'error' });
+    console.error(e);
+    throw e;
   }
 }
 
 export default function ImportDataDialog({ open, onClose, onSubmit }: IImportDataDialogProps) {
   const snackbar = useContext(SnackbarContext);
+  const importReducer = useCallback((state: IImportState, action: IImportAction) => {
+    return importReducerRaw(state, action, snackbar);
+  }, [snackbar]);
 
-  const [rawRecords, setRecords] = useState<CSVRecords | null>(null);
-  const recordsData = rawRecords ? rawRecords[0] : null;
-  const recordsHeaders = rawRecords ? rawRecords[1] : null;
+  const [importState, updateImportState] = useReducer(importReducer, { activeStep: 0 });
 
   const openHandler = async () => {
     try {
-      let data = await loadRecords();
-      setRecords(data);
+      const [data, headers] = await loadRecords();
+      updateImportState({ type: 'loadRawRecords', data, headers });
     } catch (e) {
       snackbar({ message: `Error opening file: ${e}`, severity: 'error' });
       console.error(e);
+      // onClose(); TODO: reenable this
     }
   };
 
@@ -105,120 +132,71 @@ export default function ImportDataDialog({ open, onClose, onSubmit }: IImportDat
     }
   }, [open]);
 
-  useEffect(() => {
-    if (recordsHeaders) {
-      // if some column has the same name as a field, set it automatically
-      recordsHeaders.forEach((header) => {
-        let lowerHeader = header.toLowerCase();
-        if (lowerHeader === 'amount' && !columnMapping.Amount) {
-          updateColumnMapping({ field: 'Amount', value: header });
-        }
-        if (lowerHeader === 'date' && !columnMapping.Date) {
-          updateColumnMapping({ field: 'Date', value: header });
-        }
-        if (lowerHeader === 'category' && !columnMapping.Category) {
-          updateColumnMapping({ field: 'Category', value: header });
-        }
-        if (lowerHeader === 'description' && !columnMapping.Description) {
-          updateColumnMapping({ field: 'Description', value: header });
-        }
-      });
-    }
-  }, [recordsHeaders]);
+  const nextButtonBoxRef = useRef(null as null | HTMLDivElement);
 
-  const [columnMapping, updateColumnMapping] = useReducer(stateReducer, { Amount: null, Date: null, Category: null, Description: null });
-
-  function OneColumnMapper({ column, idx }: { column: IColumnNames, idx: number }) {
-    return (
-      <>
-        <InputLabel id={`import-dialog-${column}-label`} sx={{
-          gridColumn: '1 / 2',
-          gridRow: `${idx} / span 1`,
-          display: 'flex',
-          flexDirection: 'row',
-          justifyContent: 'flex-start',
-          alignItems: 'center',
-          alignContent: 'center',
-        }}><Typography variant="h6" >{column}</Typography></InputLabel>
-        <Select
-          labelId={`import-dialog-${column}-label`}
-          value={columnMapping[column] || ''}
-          label={column}
-          onChange={ev =>
-            updateColumnMapping({ field: column, value: ev.target.value })
-          }
-          sx={{
-            gridColumn: '2 / 3',
-            gridRow: `${idx} / span 1`,
-          }}
-          renderValue={(value) => value || 'None'}
-        >
-          {
-            (recordsHeaders || []).map((header) =>
-              <MenuItem key={header} value={header}>{header}</MenuItem>
-            )
-          }
-        </Select>
-      </>
-    );
-  }
+  const apiRef = useGridApiRef();
 
   return (
-    <Dialog open={open} onClose={onClose} >
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth={false}>
       <DialogTitle>Import Data</DialogTitle>
       <DialogContent>
-        {recordsData && recordsHeaders ?
+        <Box sx={{ width: '100%', marginTop: '5px' }}>
+          <Stepper activeStep={importState.activeStep} sx={{ marginBottom: '1ex' }}>
+            <Step key={0}>
+              <StepLabel>Load Data</StepLabel>
+            </Step>
+            <Step key={1}>
+              <StepLabel>Map Columns</StepLabel>
+            </Step>
+            <Step key={2}>
+              <StepLabel>View & Edits</StepLabel>
+            </Step>
+          </Stepper>
+        </Box>
+        {importState.activeStep === 0 ? <Typography variant="body1">Loading data...</Typography> : null}
+        {importState.activeStep === 1 ?
           <>
             <DialogContentText sx={{ marginBottom: '1ex' }}>
-              Column titles: {recordsHeaders.join(', ')}
+              Column titles: {importState.rawRecordsHeaders.join(', ')}
               <br />
-              Loaded {recordsData.length} rows.
+              Loaded {importState.rawRecordsData.length} rows.
             </DialogContentText>
             <Typography variant="h6">Column Mapping</Typography>
             <DialogContentText>
               Please select the columns from the imported data that correspond to the fields below.
             </DialogContentText>
-            <Box sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gridTemplateRows: '1fr 1fr 1fr 1fr',
-              rowGap: '1ex',
-              columnGap: '1ex',
-            }}>
-              <OneColumnMapper column="Amount" idx={1} />
-              <OneColumnMapper column="Date" idx={2} />
-              <OneColumnMapper column="Category" idx={3} />
-              <OneColumnMapper column="Description" idx={4} />
-            </Box>
-          </>
-          : <Typography variant="body1">Loading data...</Typography>}
+            <ColumnMapper recordsHeaders={importState.rawRecordsHeaders} buttonPortalRef={nextButtonBoxRef} onSubmit={columnMapping => updateImportState({ type: 'remapRecords', columnMapping })} />
+          </> : null}
+        {importState.activeStep === 2 ?
+          <Box sx={{ height: 400, width: '100%', paddingBottom: '2rem' }}>
+            <DataGrid
+              columns={columns}
+              rows={importState.records}
+              sx={{
+                marginTop: '1rem',
+              }}
+              apiRef={apiRef}
+            />
+          </Box>
+          : null}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button onClick={() => {
-          if (recordsData) {
+        <Button onClick={onClose} sx={{ marginRight: '0.5rem' }}>Cancel</Button>
+        {importState.activeStep === 0 ? <Button onClick={openHandler} variant="contained">Open File</Button> : null}
+        {importState.activeStep === 1 ? <Box ref={nextButtonBoxRef} /> : null}
+        {importState.activeStep === 2 ? <Button onClick={() => {
+          if (apiRef.current) {
+            const data: IStandardRecords = [];
+            apiRef.current.getRowModels().forEach((row) => { data.push(row as IStandardRecord); });
+
+            onSubmit(data);
             onClose();
-
-            try {
-              const parsedData = recordsData.map((record, i) => {
-                const id = `idx_${i}`;
-                return parseStandardRecord(
-                  record[columnMapping.Amount || ''],
-                  record[columnMapping.Date || ''],
-                  record[columnMapping.Category || ''],
-                  record[columnMapping.Description || ''], id);
-              });
-
-              onSubmit(parsedData);
-            }
-            catch (e) {
-              snackbar({ message: `Failed to parse data: ${e}`, severity: 'error' });
-              console.error(e);
-            }
-          } else {
-            throw new Error("recordsData or value in columnMapping is null in ImportDataDialog");
           }
-        }} variant="contained" disabled={!Object.values(columnMapping).every(e => e) || !rawRecords}>Import</Button>
+          else {
+            snackbar({ message: 'Failed to get data from grid, apiRef is null', severity: 'error' });
+            console.error('Failed to get data from grid, apiRef is null');
+          }
+        }} variant="contained">Submit</Button> : null}
       </DialogActions>
     </Dialog >
   );

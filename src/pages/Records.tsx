@@ -148,15 +148,12 @@ export default function Records() {
         </Typography>
       </Toolbar>
     </AppBar>
-    {/* <div>
-      Records
-    </div>
     <Paper sx={{
       padding: '1rem',
       margin: '1rem',
     }}>
-      stuff
-    </Paper> */}
+      idk
+    </Paper>
     <Box sx={{ height: 400, width: '100%', paddingBottom: '2rem' }}>
       <DataGrid
         columns={columns}

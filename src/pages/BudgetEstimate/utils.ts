@@ -1,10 +1,10 @@
 import { FixedExpense, PercentExpense } from "../../data";
-import { Dinero } from "dinero.js";
-import DineroBuilder from "dinero.js";
+// import { Dinero } from "dinero.js";
+// import DineroBuilder from "dinero.js";
 import { IncomeAndExpensesJson } from "../../rust-types/IncomeAndExpensesJson";
 import { ExpensesJson } from "../../rust-types/ExpensesJson";
 import { IIncomeExpenseState } from "./stateReducer";
-import { useCallback, useState } from "react";
+import { useState } from "react";
 
 
 export interface IExpenses {
