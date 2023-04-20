@@ -21,6 +21,22 @@ export interface SnackbarMessage {
 export const SnackbarContext = createContext<(_: SnackbarMessage) => void>((_) => { });
 export const BottomNavContext = createContext<[number, (_: number) => void]>([0, (_: number) => { }]);
 
+// TODO: figure out how to be generic with function
+// export type SnackbarResult<T, R> = [(_: SnackbarMessage) => void];
+
+// export function useSnackbar() {
+//   const snackbar = useContext(SnackbarContext);
+//   const snackbarCatcher = useCallback((prefix: string, func: any) => {
+//     try {
+//       func();
+//     } catch (e) {
+//       snackbar({ 'message': `${prefix}: ${e}`, severity: 'error' });
+//     }
+//   }, [snackbar]);
+
+//   return [snackbar, snackbarCatcher];
+// }
+
 const router = createMemoryRouter([
   {
     path: '/',
